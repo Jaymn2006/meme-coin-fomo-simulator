@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meme Coin FOMO Simulator</title>
+
   <style>
     :root {
       --ink: #09130f;
@@ -47,9 +48,23 @@
     .top-nav { display: flex; align-items: center; justify-content: space-between; min-height: 46px; padding: 0 14px; overflow: hidden; border: 1px solid #252b2c; background: rgba(12,14,15,.92); }
     .brand { color: #f4f5f5; font: 900 17px Georgia, serif; }
     .brand::before { content: "◉"; margin-right: 7px; color: var(--acid); }
-    .nav-links { display: flex; gap: 23px; color: #8b9092; font: 10px Consolas, monospace; }
-    .nav-links span:first-child { color: #f4f5f5; }
-    .nav-tools { color: #a5abad; font: 14px sans-serif; }
+    .nav-links { display: flex; gap: 8px; color: #8b9092; font: 10px Consolas, monospace; }
+    .nav-link, .nav-tool { width: auto; padding: 8px 7px; background: transparent; color: #8b9092; box-shadow: none; font: inherit; text-transform: none; }
+    .nav-link.active, .nav-link:hover, .nav-tool:hover { color: #f4f5f5; }
+    .nav-tools { display: flex; align-items: center; gap: 2px; color: #a5abad; }
+    .settings-panel { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px; padding: 16px; }
+    .settings-panel h2 { grid-column: 1 / -1; margin: 0; color: var(--acid); font: 900 20px Impact, sans-serif; text-transform: uppercase; }
+    .setting { padding: 12px; border: 1px solid var(--line); background: rgba(8,18,13,.7); color: var(--muted); font: 11px/1.45 Consolas, monospace; }
+    .setting label { display: flex; align-items: center; gap: 8px; color: #edfff1; font-weight: 800; }
+    .setting input, .setting select { accent-color: var(--acid); }
+    .pulse-panel { display: grid; grid-template-columns: 1.3fr repeat(3, 1fr); gap: 10px; margin-top: 16px; padding: 16px; }
+    .pulse-panel h2 { margin: 0 0 5px; color: var(--acid); font: 900 20px Impact, sans-serif; text-transform: uppercase; }
+    .pulse-panel p { margin: 0; color: var(--muted); font: 11px/1.45 Consolas, monospace; }
+    .pulse-stat { padding: 12px; border-left: 2px solid var(--green); background: rgba(8,18,13,.7); }
+    .pulse-stat span { display: block; color: var(--muted); font: 10px Consolas, monospace; text-transform: uppercase; }
+    .pulse-stat strong { display: block; margin-top: 6px; color: var(--green); font: 800 18px Consolas, monospace; }
+    .pulse-source { grid-column: 1 / -1; color: var(--amber) !important; }
+    .reduced-motion *, .reduced-motion *::before, .reduced-motion *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .001ms !important; }
     .left-rail { min-width: 0; }
     .rail-card { padding: 14px; margin-bottom: 10px; border: 1px solid #252b2c; background: rgba(12,14,15,.92); }
     .rail-card h2 { margin: 0 0 13px; color: #e9eded; font: 800 12px Consolas, monospace; text-transform: uppercase; }
@@ -177,6 +192,8 @@
 
     .rocket { position: fixed; bottom: -40px; z-index: 0; pointer-events: none; font-size: 30px; animation: launch var(--flight, 2.4s) linear forwards; }
     @keyframes launch { 0% { transform: translate(0, 0) rotate(-35deg); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(var(--drift), -115vh) rotate(-35deg); opacity: 0; } }
+    .firework { position: fixed; z-index: 6; width: 6px; height: 6px; pointer-events: none; border-radius: 50%; background: var(--spark-color, var(--acid)); box-shadow: 0 0 12px var(--spark-color, var(--acid)); animation: firework-burst 900ms ease-out forwards; }
+    @keyframes firework-burst { 0% { opacity: 1; transform: translate(0, 0) scale(.6); box-shadow: 0 0 8px var(--spark-color, var(--acid)); } 100% { opacity: 0; transform: translate(var(--spark-x), var(--spark-y)) scale(0); box-shadow: 0 0 2px var(--spark-color, var(--acid)); } }
     .flash { position: fixed; inset: 0; z-index: 4; display: grid; place-items: center; background: rgba(255,30,45,.24); pointer-events: none; animation: flash .72s ease-out forwards; }
     .flash strong { color: white; font: 900 clamp(42px, 12vw, 150px)/1 Impact, sans-serif; text-shadow: 6px 6px 0 #740e18; transform: rotate(-4deg); }
     @keyframes flash { 0%, 100% { opacity: 0; } 20%, 70% { opacity: 1; } }
@@ -190,18 +207,21 @@
     .scoreboard strong { display: block; color: var(--red); font: 900 clamp(40px, 8vw, 86px)/.9 Impact, sans-serif; text-shadow: 4px 4px 0 #571c24; }
     @keyframes reveal { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
     [hidden] { display: none !important; }
-    @media (max-width: 850px) { header { align-items: start; flex-direction: column; } .subhead { text-align: left; } .nav-links, .nav-tools { display: none; } .market-bar, .market-stats { align-items: start; flex-direction: column; } .market-stats { width: 100%; flex-direction: row; justify-content: space-between; gap: 8px; text-align: left; } .practice-config { grid-template-columns: 1fr 1fr; } .load-market { width: 100%; } .case-grid, .knowledge-grid { grid-template-columns: 1fr 1fr; } .learning-strip, .glossary { grid-template-columns: 1fr 1fr; } .terminal-grid { grid-template-columns: 1fr; } .chart-panel { min-height: 440px; } .chart-wrap { height: 300px; } }
+    @media (max-width: 850px) { header { align-items: start; flex-direction: column; } .subhead { text-align: left; } .top-nav { align-items: start; flex-wrap: wrap; padding: 8px; } .nav-links { gap: 0; flex-wrap: wrap; } .nav-tools { margin-left: auto; } .pulse-panel, .settings-panel { grid-template-columns: 1fr 1fr; } .market-bar, .market-stats { align-items: start; flex-direction: column; } .market-stats { width: 100%; flex-direction: row; justify-content: space-between; gap: 8px; text-align: left; } .practice-config { grid-template-columns: 1fr 1fr; } .load-market { width: 100%; } .case-grid, .knowledge-grid { grid-template-columns: 1fr 1fr; } .learning-strip, .glossary { grid-template-columns: 1fr 1fr; } .terminal-grid { grid-template-columns: 1fr; } .chart-panel { min-height: 440px; } .chart-wrap { height: 300px; } }
     @media (max-width: 520px) { .practice-config, .case-grid, .knowledge-grid, .learning-strip, .glossary { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <div class="shell">
-    <nav class="top-nav"><span class="brand">Quantara Practice</span><div class="nav-links"><span>Portfolio</span><span>Markets</span><span>Futures⌄</span><span>Pulse</span><span>Trade⌄</span><span>Learning</span></div><span class="nav-tools">◌　⚙　♧　?　●</span></nav>
+    <nav class="top-nav"><span class="brand">Quantara Practice</span><div class="nav-links"><button class="nav-link active" data-view="portfolio">Portfolio</button><button class="nav-link" data-view="markets">Markets</button><button class="nav-link" data-view="futures">Futures</button><button class="nav-link" data-view="pulse">Pulse</button><button class="nav-link" data-view="trade">Trade</button><button class="nav-link" data-view="learning">Learning</button></div><span class="nav-tools"><button class="nav-tool" data-view="settings" aria-label="Open settings">⚙</button><button class="nav-tool" data-view="learning" aria-label="Open help">?</button></span></nav>
     <div class="ticker"><span>$MOONSHOT +999999% &nbsp; // &nbsp; LIQUIDITY: VIBES ONLY &nbsp; // &nbsp; DO NOT READ THE WHITEPAPER &nbsp; // &nbsp; $MOONSHOT +999999% &nbsp; // &nbsp; LIQUIDITY: VIBES ONLY &nbsp; // &nbsp; DO NOT READ THE WHITEPAPER &nbsp; // &nbsp;</span></div>
     <header>
       <div><p class="eyebrow">Live market simulation / zero financial advice</p><h1>Meme Coin<br>FOMO Simulator</h1></div>
       <p class="subhead">A zero-money practice terminal for learning charts, liquidity, slippage, and the emotional cost of buying the candle after it already happened.</p>
     </header>
+
+    <section class="panel settings-panel" id="settingsView" hidden><h2>Terminal settings</h2><div class="setting"><label><input id="motionToggle" type="checkbox" checked> Motion effects</label><span>Keep rockets, ticker movement, and transitions enabled.</span></div><div class="setting"><label for="precisionSelect">Price display</label><select id="precisionSelect"><option value="standard">Standard</option><option value="precise">More precision</option></select><span>Controls replay price formatting.</span></div><div class="setting"><label><input id="adviceToggle" type="checkbox" checked> Risk reminders</label><span>Show educational warnings beside execution controls.</span></div></section>
+    <section class="panel pulse-panel" id="pulseView" hidden><div><h2>Market pulse</h2><p>Live diagnostics from this practice replay. Real markets move on news, liquidity, positioning, and changing expectations.</p></div><div class="pulse-stat"><span>Current regime</span><strong id="pulseRegime">READY</strong></div><div class="pulse-stat"><span>Hype / attention</span><strong id="pulseHype">0%</strong></div><div class="pulse-stat"><span>Liquidity risk</span><strong id="pulseRisk">LOW</strong></div><p class="pulse-source">REAL-WORLD FRAME: thin liquidity increases market impact; volatility is not the same thing as risk-adjusted opportunity. This terminal does not fetch live prices.</p></section>
 
     <section class="practice-config"><div class="config-field"><label for="scenarioSelect">Choose a market case</label><select id="scenarioSelect"><option value="doge">Rocket Dog · long-run moonshot</option><option value="shib">Shelter Dog · viral supply shock</option><option value="pepe">Green Frog · explosive fade</option><option value="bonk">Solana Dog · volatile chop</option><option value="hat">Hat Dog · fast breakout</option><option value="rug">Melon · anonymous rug pull</option></select></div><div class="config-field"><label for="bankroll">Practice bankroll</label><input id="bankroll" type="number" min="10" step="10" value="2000"></div><button id="loadMarket" class="load-market">Load case</button><div class="data-import"><label for="csvFile">Use real OHLC CSV</label><input id="csvFile" type="file" accept=".csv,text/csv"><span id="dataSource" class="data-source">PRACTICE REPLAY</span></div><p class="case-note"><strong>Training wallet only.</strong> Pick an amount you can afford to lose in the simulation, then compare how the same entry behaves across different meme-coin market structures. Built-in cases are fictionalized practice replays; imported candles retain the records you provide and are labeled as source data.</p></section>
     <div class="liquid-orb" aria-hidden="true"></div><section class="market-bar"><div class="token-title"><div id="tokenAvatar" class="token-avatar">D</div><div><strong id="tokenName">ROCKET DOG</strong><span><b id="tokenSymbol">$DOGE2</b> · <span id="tokenTag">long-run moonshot</span> · <b id="holders">1</b> holders</span></div></div><div class="market-stats"><div><span>Market cap</span><strong id="marketCap">$0</strong></div><div><span>Liquidity</span><strong id="marketLiquidity">$0</strong></div><div><span>24h</span><strong id="change">+0.00%</strong></div></div></section>
@@ -271,6 +291,14 @@
     const csvFile = document.querySelector('#csvFile');
     const dataSource = document.querySelector('#dataSource');
     const ohlcLegend = document.querySelector('#ohlcLegend');
+    const pulseView = document.querySelector('#pulseView');
+    const settingsView = document.querySelector('#settingsView');
+    const pulseRegime = document.querySelector('#pulseRegime');
+    const pulseHype = document.querySelector('#pulseHype');
+    const pulseRisk = document.querySelector('#pulseRisk');
+    const motionToggle = document.querySelector('#motionToggle');
+    const adviceToggle = document.querySelector('#adviceToggle');
+    const precisionSelect = document.querySelector('#precisionSelect');
     let points = [];
     let phase = 'ready';
     let pumpTimer;
@@ -349,7 +377,7 @@
     }
 
     function formatMoney(value) { return `$${Math.max(0, Math.round(value)).toLocaleString()}`; }
-    function formatPrice(value) { return value > 1 ? formatMoney(value) : `$${Number(value).toPrecision(4)}`; }
+    function formatPrice(value) { return value > 1 ? formatMoney(value) : `$${Number(value).toPrecision(precisionSelect.value === 'precise' ? 7 : 4)}`; }
     function formatSol(value) { return formatMoney(value); }
     function updateWallet() {
       walletBalance.textContent = formatMoney(currentWallet);
@@ -410,6 +438,9 @@
       tableChange.classList.toggle('negative', change.textContent.startsWith('-'));
       tableChange.classList.toggle('positive', !change.textContent.startsWith('-'));
       tableLiquidity.textContent = marketLiquidity.textContent;
+      pulseHype.textContent = `${Math.min(99, Math.round(progress))}%`;
+      pulseRegime.textContent = phase === 'ready' ? 'READY' : phase === 'pumping' ? 'TREND / VOLATILE' : phase === 'peak' ? 'DISTRIBUTION' : scenario.outcome === 'rug' ? 'LIQUIDITY EVENT' : 'POST-PEAK';
+      pulseRisk.textContent = progress > 70 || scenario.volatility > 1.7 || scenario.outcome === 'rug' ? 'HIGH' : progress > 35 ? 'MEDIUM' : 'LOW';
     }
 
     function spawnRocket() {
@@ -421,6 +452,29 @@
       rocket.style.setProperty('--flight', `${1.6 + Math.random() * 1.8}s`);
       document.body.append(rocket);
       rocket.addEventListener('animationend', () => rocket.remove());
+    }
+
+    function launchFireworks() {
+      const colors = ['#b7ff3c', '#3dff87', '#ffd166', '#ff4654'];
+      for (let burst = 0; burst < 3; burst += 1) {
+        setTimeout(() => {
+          const centerX = 22 + Math.random() * 56;
+          const centerY = 22 + Math.random() * 28;
+          for (let spark = 0; spark < 18; spark += 1) {
+            const angle = (Math.PI * 2 * spark) / 18;
+            const distance = 45 + Math.random() * 65;
+            const particle = document.createElement('span');
+            particle.className = 'firework';
+            particle.style.left = `${centerX}vw`;
+            particle.style.top = `${centerY}vh`;
+            particle.style.setProperty('--spark-x', `${Math.cos(angle) * distance}px`);
+            particle.style.setProperty('--spark-y', `${Math.sin(angle) * distance}px`);
+            particle.style.setProperty('--spark-color', colors[(spark + burst) % colors.length]);
+            document.body.append(particle);
+            particle.addEventListener('animationend', () => particle.remove());
+          }
+        }, burst * 180);
+      }
     }
 
     function showModal() { modal.hidden = false; }
@@ -463,6 +517,7 @@
       updateWallet();
       addTrade(scenario.outcome === 'rug' ? 'SELL' : 'HOLD', scenario.tag, formatMoney(returnValue));
       if (scenario.outcome === 'rug') flashCrash();
+      if (scenario.outcome === 'moon') launchFireworks();
       setTimeout(() => { panic.disabled = false; status.textContent = 'EXIT WINDOW OPEN // sell to record your simulated result'; }, 850);
     }
 
@@ -584,6 +639,19 @@
     chartWrap.addEventListener('pointerdown', enterAtChartPoint);
 
     document.querySelector('#closeModal').addEventListener('click', () => { modal.hidden = true; });
+    document.querySelectorAll('[data-view]').forEach(control => control.addEventListener('click', () => {
+      const view = control.dataset.view;
+      document.querySelectorAll('.nav-link').forEach(link => link.classList.toggle('active', link.dataset.view === view));
+      pulseView.hidden = view !== 'pulse';
+      settingsView.hidden = view !== 'settings';
+      const targets = { portfolio: '.left-rail', markets: '.market-table', futures: '.case-history', trade: '.trade-panel', learning: '.knowledge' };
+      const target = targets[view] ? document.querySelector(targets[view]) : null;
+      if (target) target.scrollIntoView({ behavior: motionToggle.checked ? 'smooth' : 'auto', block: 'start' });
+      if (view === 'pulse' || view === 'settings') window.scrollTo({ top: 0, behavior: motionToggle.checked ? 'smooth' : 'auto' });
+    }));
+    motionToggle.addEventListener('change', () => document.body.classList.toggle('reduced-motion', !motionToggle.checked));
+    adviceToggle.addEventListener('change', () => document.querySelector('.warning').hidden = !adviceToggle.checked);
+    precisionSelect.addEventListener('change', () => { if (historicalRecords.length && activeOhlc.length) price.textContent = formatPrice(activeOhlc[activeOhlc.length - 1].close); });
     applyScenario();
     resetRound();
   </script>
