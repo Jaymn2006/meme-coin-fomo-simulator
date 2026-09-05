@@ -98,24 +98,6 @@ The learning lab introduces:
 
 These concepts are educational explanations, not trading signals or financial advice.
 
-## GitHub Pages
-
-The static browser version can be hosted with GitHub Pages:
-
-1. Create a public GitHub repository.
-2. Upload `index.html` and `README.md`.
-3. Open the repository's **Settings**.
-4. Select **Pages**.
-5. Choose **Deploy from a branch**.
-6. Select the `main` branch and the root folder.
-7. Click **Save**.
-
-GitHub will provide a public address similar to:
-
-```text
-https://YOUR-USERNAME.github.io/YOUR-REPOSITORY/
-```
-
 GitHub Pages runs the browser game but does not run `server.py`. Use the Python server locally or deploy it separately to a Python-capable service.
 
 ## Technology
