@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meme Coin FOMO Simulator</title>
+  <style>
+    :root {
+      --ink: #09130f;
+      --panel: #101c17;
+      --panel-2: #162820;
+      --line: #29453a;
+      --acid: #b7ff3c;
+      --green: #3dff87;
+      --red: #ff4654;
+      --amber: #ffd166;
+      --muted: #8ba899;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: #07100c; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      color: #edfff1;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(61,255,135,.12), transparent 28rem),
+        linear-gradient(135deg, #07100c 0%, #0d1812 58%, #170e12 100%);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+    body::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .28; background: radial-gradient(circle at 18% 12%, rgba(255,255,255,.18) 0 1px, transparent 2px), radial-gradient(circle at 82% 72%, rgba(183,255,60,.12) 0 1px, transparent 2px); background-size: 28px 28px, 42px 42px; mix-blend-mode: screen; }
+
+    .shell { max-width: 1500px; margin: 0 auto; padding: 18px; position: relative; z-index: 1; }
+    .ticker { border-block: 1px solid var(--line); overflow: hidden; white-space: nowrap; color: var(--acid); font: 700 12px/34px Consolas, monospace; letter-spacing: .12em; }
+    .ticker span { display: inline-block; animation: crawl 18s linear infinite; }
+    @keyframes crawl { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    header { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding: 34px 0 24px; }
+    .eyebrow { margin: 0 0 10px; color: var(--red); font: 800 12px Consolas, monospace; letter-spacing: .2em; text-transform: uppercase; }
+    h1 { margin: 0; font: 900 clamp(36px, 7vw, 82px)/.86 Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif; letter-spacing: .01em; text-transform: uppercase; text-shadow: 4px 4px 0 #1d422c; }
+    .subhead { max-width: 330px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.4; text-align: right; }
+
+    .dashboard { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; }
+    .panel { border: 1px solid rgba(183,255,60,.2); background: linear-gradient(145deg, rgba(28,48,38,.72), rgba(8,18,13,.9)); box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 14px 50px rgba(0,0,0,.26); -webkit-backdrop-filter: blur(18px) saturate(130%); backdrop-filter: blur(18px) saturate(130%); }
+    .top-nav { display: flex; align-items: center; justify-content: space-between; min-height: 46px; padding: 0 14px; overflow: hidden; border: 1px solid #252b2c; background: rgba(12,14,15,.92); }
+    .brand { color: #f4f5f5; font: 900 17px Georgia, serif; }
+    .brand::before { content: "◉"; margin-right: 7px; color: var(--acid); }
+    .nav-links { display: flex; gap: 23px; color: #8b9092; font: 10px Consolas, monospace; }
+    .nav-links span:first-child { color: #f4f5f5; }
+    .nav-tools { color: #a5abad; font: 14px sans-serif; }
+    .left-rail { min-width: 0; }
+    .rail-card { padding: 14px; margin-bottom: 10px; border: 1px solid #252b2c; background: rgba(12,14,15,.92); }
+    .rail-card h2 { margin: 0 0 13px; color: #e9eded; font: 800 12px Consolas, monospace; text-transform: uppercase; }
+    .rail-token { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid #242a2b; font: 10px Consolas, monospace; }
+    .rail-token i { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: #392f4f; color: white; font-style: normal; }
+    .rail-token strong { display: block; color: #e9eded; }
+    .rail-token small { color: #737b7d; }
+    .rail-token em { color: var(--green); font-style: normal; }
+    .chart-panel { min-height: 520px; padding: 18px; position: relative; overflow: hidden; }
+    .panel-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .coin-name { color: var(--acid); font: 800 17px Consolas, monospace; }
+    .price { color: var(--green); font: 900 28px Consolas, monospace; }
+    .price.crashed { color: var(--red); }
+    .chart-wrap { height: 385px; border: 1px solid #244333; background: repeating-linear-gradient(0deg, transparent 0 48px, rgba(183,255,60,.08) 49px 50px), repeating-linear-gradient(90deg, transparent 0 78px, rgba(183,255,60,.06) 79px 80px), linear-gradient(145deg, rgba(14,43,27,.8), #07100c); cursor: crosshair; touch-action: manipulation; }
+    svg { width: 100%; height: 100%; display: block; }
+    .chart-fill { fill: rgba(61,255,135,.12); }
+    .chart-line { fill: none; stroke: var(--green); stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 5px rgba(61,255,135,.8)); }
+    .chart-line.crash { stroke: var(--red); filter: drop-shadow(0 0 7px rgba(255,70,84,.9)); }
+    .candle-wick { stroke-width: 2; }
+    .candle-body { stroke-width: 1; }
+    .candle-up { fill: var(--green); stroke: var(--green); }
+    .candle-down { fill: var(--red); stroke: var(--red); }
+    .chart-hint { margin-top: 7px; color: var(--muted); font: 10px Consolas, monospace; }
+    .entry-marker { fill: var(--acid); stroke: #08110b; stroke-width: 3; filter: drop-shadow(0 0 7px rgba(183,255,60,.9)); }
+    .status { margin-top: 14px; min-height: 28px; color: var(--amber); font: 700 13px Consolas, monospace; }
+
+    aside { display: flex; flex-direction: column; gap: 16px; }
+    .control-panel { padding: 18px; }
+    .control-panel h2, .metrics h2 { margin: 0 0 17px; font: 900 20px Impact, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+    button { width: 100%; border: 0; padding: 17px 13px; cursor: pointer; color: #07100c; font: 900 15px Consolas, monospace; letter-spacing: .02em; text-transform: uppercase; transition: transform .12s, filter .12s, opacity .12s; }
+    button:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.14); }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:disabled { cursor: not-allowed; opacity: .3; }
+    .start { margin-bottom: 10px; background: var(--acid); box-shadow: 5px 5px 0 #466d18; }
+    .buy { background: var(--green); box-shadow: 5px 5px 0 #176c38; }
+    .panic { margin-top: 10px; background: var(--red); color: white; box-shadow: 5px 5px 0 #721f28; }
+    .metrics { padding: 18px; }
+    .metric { display: flex; justify-content: space-between; padding: 11px 0; border-top: 1px solid var(--line); color: var(--muted); font: 12px Consolas, monospace; }
+    .metric strong { color: #edfff1; }
+    .warning { padding: 12px; border-left: 3px solid var(--red); background: rgba(255,70,84,.08); color: #ff9ba3; font: 700 12px/1.4 Consolas, monospace; }
+    .learning-strip { display: grid; grid-template-columns: 1.2fr repeat(3, 1fr); gap: 1px; margin-top: 16px; border: 1px solid var(--line); background: var(--line); }
+    .lesson, .lesson-intro { padding: 15px; background: rgba(16,28,23,.94); }
+    .lesson-intro { border-left: 3px solid var(--acid); }
+    .lesson-intro strong { display: block; margin-bottom: 6px; color: var(--acid); font: 900 16px Impact, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+    .lesson-intro span, .lesson p { color: var(--muted); font: 11px/1.45 Consolas, monospace; }
+    .lesson b { display: block; margin-bottom: 5px; color: #f3fff5; font: 800 12px Consolas, monospace; }
+    .lesson p { margin: 0; }
+    .glossary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+    .glossary-card { padding: 14px; border: 1px solid var(--line); background: rgba(16,28,23,.9); }
+    .glossary-card strong { display: block; margin-bottom: 6px; color: var(--green); font: 800 12px Consolas, monospace; }
+    .glossary-card p { margin: 0; color: var(--muted); font: 11px/1.5 Consolas, monospace; }
+    .reset { max-width: 230px; margin: 20px auto 0; background: var(--acid); box-shadow: 5px 5px 0 #466d18; }
+    .practice-config { display: grid; grid-template-columns: 1.5fr 1fr auto; gap: 12px; align-items: end; margin-top: 16px; padding: 16px; border: 1px solid var(--line); background: rgba(16,28,23,.94); }
+    .config-field label { display: block; margin-bottom: 7px; color: var(--muted); font: 11px Consolas, monospace; text-transform: uppercase; }
+    .config-field input, .config-field select { width: 100%; border: 1px solid var(--line); outline: 0; padding: 12px; background: #0a140e; color: #f3fff5; font: 800 14px Consolas, monospace; }
+    .config-field select { cursor: pointer; }
+    .load-market { width: auto; min-width: 150px; background: var(--acid); box-shadow: 4px 4px 0 #466d18; }
+    .case-note { grid-column: 1 / -1; margin: 0; color: var(--muted); font: 11px/1.45 Consolas, monospace; }
+    .case-note strong { color: var(--amber); }
+    .data-import { display: flex; align-items: center; gap: 10px; padding-top: 2px; }
+    .data-import label { color: var(--muted); font: 11px Consolas, monospace; }
+    .data-import input { max-width: 190px; color: var(--muted); font: 10px Consolas, monospace; }
+    .data-source { color: var(--amber); font: 10px Consolas, monospace; }
+    .wallet-balance { color: var(--acid); font: 11px Consolas, monospace; }
+    .wallet-balance strong { display: block; margin-top: 4px; color: #f3fff5; font-size: 15px; }
+    .scenario-badge { display: inline-block; margin-left: 7px; padding: 3px 6px; border: 1px solid var(--line); color: var(--amber); font: 10px Consolas, monospace; vertical-align: middle; }
+    .case-history { margin-top: 16px; }
+    .case-history h2 { margin: 0 0 10px; font: 900 18px Impact, sans-serif; text-transform: uppercase; }
+    .case-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .case-card { padding: 12px; border: 1px solid var(--line); background: rgba(16,28,23,.8); }
+    .case-card strong { display: block; color: var(--green); font: 800 12px Consolas, monospace; }
+    .case-card span { display: block; margin-top: 4px; color: var(--muted); font: 10px/1.35 Consolas, monospace; }
+    .knowledge { margin-top: 16px; padding: 18px; border: 1px solid var(--line); background: rgba(16,28,23,.94); }
+    .knowledge h2 { margin: 0 0 8px; font: 900 22px Impact, sans-serif; text-transform: uppercase; }
+    .knowledge-intro { margin: 0 0 16px; color: var(--muted); font: 12px/1.5 Consolas, monospace; }
+    .knowledge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .knowledge-card { padding: 14px; border-top: 2px solid var(--acid); background: #0b1710; }
+    .knowledge-card h3 { margin: 0 0 8px; color: var(--acid); font: 800 14px Consolas, monospace; }
+    .knowledge-card p { margin: 0; color: #c6dbcb; font: 11px/1.55 Consolas, monospace; }
+    .formula { margin-top: 8px; color: var(--green); font: 11px Consolas, monospace; }
+    .math-note { margin-top: 14px; padding: 12px; border-left: 3px solid var(--amber); color: var(--amber); background: rgba(255,209,102,.06); font: 11px/1.5 Consolas, monospace; }
+    .liquid-orb { position: fixed; width: 210px; height: 210px; right: 4vw; bottom: 5vh; z-index: 0; pointer-events: none; border: 1px solid rgba(183,255,60,.24); border-radius: 46% 54% 62% 38%; background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.42), transparent 8%), radial-gradient(circle at 55% 60%, rgba(61,255,135,.2), transparent 50%), rgba(61,255,135,.06); filter: blur(.2px); box-shadow: inset 18px -20px 25px rgba(0,0,0,.25), inset -12px 10px 20px rgba(255,255,255,.08), 0 0 90px rgba(61,255,135,.12); animation: liquid-drift 9s ease-in-out infinite alternate; }
+    @keyframes liquid-drift { from { transform: translate3d(0,0,0) rotate(-6deg); border-radius: 46% 54% 62% 38%; } to { transform: translate3d(-20px,-16px,0) rotate(9deg); border-radius: 62% 38% 46% 54%; } }
+    .market-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; border: 1px solid var(--line); background: rgba(16,28,23,.88); }
+    .token-title { display: flex; align-items: center; gap: 12px; }
+    .token-avatar { display: grid; width: 42px; height: 42px; place-items: center; border: 2px solid var(--acid); background: #243c20; color: var(--acid); font: 900 21px Impact, sans-serif; }
+    .token-title strong { display: block; color: #f3fff5; font: 900 20px Impact, sans-serif; letter-spacing: .04em; }
+    .token-title span, .mini-label { color: var(--muted); font: 11px Consolas, monospace; }
+    .market-stats { display: flex; gap: 28px; text-align: right; }
+    .market-stats strong { display: block; color: var(--green); font: 800 15px Consolas, monospace; }
+    .market-stats span { color: var(--muted); font: 10px Consolas, monospace; text-transform: uppercase; }
+    .terminal-grid { display: grid; grid-template-columns: 218px minmax(0, 1fr) 312px; gap: 10px; margin-top: 12px; }
+    .chart-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0 0 12px; }
+    .tabs { display: flex; gap: 5px; }
+    .tab { width: auto; padding: 7px 12px; background: transparent; color: var(--muted); box-shadow: none; font-size: 11px; }
+    .tab.active { background: var(--panel-2); color: var(--acid); }
+    .pair-state { color: var(--green); font: 11px Consolas, monospace; }
+    .curve { margin-top: 16px; padding: 15px 0 0; border-top: 1px solid var(--line); }
+    .curve-head { display: flex; justify-content: space-between; color: var(--muted); font: 11px Consolas, monospace; }
+    .curve-head strong { color: var(--acid); }
+    .curve-track { height: 9px; margin-top: 9px; border: 1px solid #31582e; background: #0b150e; }
+    .curve-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--green), var(--acid)); transition: width .15s; }
+    .trade-panel { padding: 18px; }
+    .trade-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .trade-header h2 { margin: 0; font: 900 20px Impact, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+    .wallet { color: var(--acid); font: 11px Consolas, monospace; }
+    .trade-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 16px; padding: 4px; background: #0a140e; }
+    .trade-tabs button { padding: 10px; background: transparent; color: var(--muted); box-shadow: none; font-size: 12px; }
+    .trade-tabs button.active { background: var(--green); color: var(--ink); }
+    .input-label { display: flex; justify-content: space-between; margin: 15px 0 6px; color: var(--muted); font: 11px Consolas, monospace; }
+    .amount { display: flex; border: 1px solid var(--line); background: #0a140e; }
+    .amount input { width: 100%; min-width: 0; border: 0; outline: 0; padding: 13px; background: transparent; color: #f3fff5; font: 800 18px Consolas, monospace; }
+    .amount span { padding: 14px 11px; color: var(--acid); font: 800 12px Consolas, monospace; }
+    .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 7px; }
+    .quick button { padding: 7px 3px; background: var(--panel-2); color: var(--muted); box-shadow: none; font-size: 10px; }
+    .execute { margin-top: 16px; background: var(--acid); box-shadow: 5px 5px 0 #466d18; }
+    .trade-note { margin: 13px 0 0; color: var(--muted); font: 10px/1.4 Consolas, monospace; }
+    .feed-panel { padding: 18px; }
+    .feed-panel h2 { margin: 0 0 13px; font: 900 18px Impact, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+    .trade-row { display: grid; grid-template-columns: 48px 1fr auto; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); font: 11px Consolas, monospace; }
+    .trade-row b { color: var(--green); }
+    .trade-row small { color: var(--muted); }
+    .trade-row time { color: #d7e9db; text-align: right; }
+    .scoreboard { margin-top: 16px; }
+
+    .rocket { position: fixed; bottom: -40px; z-index: 0; pointer-events: none; font-size: 30px; animation: launch var(--flight, 2.4s) linear forwards; }
+    @keyframes launch { 0% { transform: translate(0, 0) rotate(-35deg); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(var(--drift), -115vh) rotate(-35deg); opacity: 0; } }
+    .flash { position: fixed; inset: 0; z-index: 4; display: grid; place-items: center; background: rgba(255,30,45,.24); pointer-events: none; animation: flash .72s ease-out forwards; }
+    .flash strong { color: white; font: 900 clamp(42px, 12vw, 150px)/1 Impact, sans-serif; text-shadow: 6px 6px 0 #740e18; transform: rotate(-4deg); }
+    @keyframes flash { 0%, 100% { opacity: 0; } 20%, 70% { opacity: 1; } }
+    .modal { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; padding: 20px; background: rgba(2,8,5,.78); }
+    .modal-card { max-width: 430px; padding: 28px; border: 2px solid var(--acid); background: var(--panel); box-shadow: 10px 10px 0 #244c2d; text-align: center; }
+    .modal-card h3 { margin: 0 0 12px; color: var(--acid); font: 900 32px Impact, sans-serif; text-transform: uppercase; }
+    .modal-card p { margin: 0 0 20px; color: #c6dbcb; line-height: 1.5; }
+    .modal-card button { background: var(--acid); }
+    .scoreboard { margin-top: 16px; padding: 30px 18px 34px; border: 2px solid var(--red); background: linear-gradient(120deg, rgba(255,70,84,.14), rgba(16,28,23,.94)); text-align: center; animation: reveal .45s ease-out both; }
+    .scoreboard p { margin: 0 0 10px; color: var(--muted); font: 700 12px Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; }
+    .scoreboard strong { display: block; color: var(--red); font: 900 clamp(40px, 8vw, 86px)/.9 Impact, sans-serif; text-shadow: 4px 4px 0 #571c24; }
+    @keyframes reveal { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    [hidden] { display: none !important; }
+    @media (max-width: 850px) { header { align-items: start; flex-direction: column; } .subhead { text-align: left; } .nav-links, .nav-tools { display: none; } .market-bar, .market-stats { align-items: start; flex-direction: column; } .market-stats { width: 100%; flex-direction: row; justify-content: space-between; gap: 8px; text-align: left; } .practice-config { grid-template-columns: 1fr 1fr; } .load-market { width: 100%; } .case-grid, .knowledge-grid { grid-template-columns: 1fr 1fr; } .learning-strip, .glossary { grid-template-columns: 1fr 1fr; } .terminal-grid { grid-template-columns: 1fr; } .chart-panel { min-height: 440px; } .chart-wrap { height: 300px; } }
+    @media (max-width: 520px) { .practice-config, .case-grid, .knowledge-grid, .learning-strip, .glossary { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <nav class="top-nav"><span class="brand">Quantara Practice</span><div class="nav-links"><span>Portfolio</span><span>Markets</span><span>Futures⌄</span><span>Pulse</span><span>Trade⌄</span><span>Learning</span></div><span class="nav-tools">◌　⚙　♧　?　●</span></nav>
+    <div class="ticker"><span>$MOONSHOT +999999% &nbsp; // &nbsp; LIQUIDITY: VIBES ONLY &nbsp; // &nbsp; DO NOT READ THE WHITEPAPER &nbsp; // &nbsp; $MOONSHOT +999999% &nbsp; // &nbsp; LIQUIDITY: VIBES ONLY &nbsp; // &nbsp; DO NOT READ THE WHITEPAPER &nbsp; // &nbsp;</span></div>
+    <header>
+      <div><p class="eyebrow">Live market simulation / zero financial advice</p><h1>Meme Coin<br>FOMO Simulator</h1></div>
+      <p class="subhead">A zero-money practice terminal for learning charts, liquidity, slippage, and the emotional cost of buying the candle after it already happened.</p>
+    </header>
+
+    <section class="practice-config"><div class="config-field"><label for="scenarioSelect">Choose a market case</label><select id="scenarioSelect"><option value="doge">Rocket Dog · long-run moonshot</option><option value="shib">Shelter Dog · viral supply shock</option><option value="pepe">Green Frog · explosive fade</option><option value="bonk">Solana Dog · volatile chop</option><option value="hat">Hat Dog · fast breakout</option><option value="rug">Melon · anonymous rug pull</option></select></div><div class="config-field"><label for="bankroll">Practice bankroll</label><input id="bankroll" type="number" min="10" step="10" value="2000"></div><button id="loadMarket" class="load-market">Load case</button><div class="data-import"><label for="csvFile">Use real OHLC CSV</label><input id="csvFile" type="file" accept=".csv,text/csv"><span id="dataSource" class="data-source">PRACTICE REPLAY</span></div><p class="case-note"><strong>Training wallet only.</strong> Pick an amount you can afford to lose in the simulation, then compare how the same entry behaves across different meme-coin market structures. Built-in cases are fictionalized practice replays; imported candles retain the records you provide and are labeled as source data.</p></section>
+    <div class="liquid-orb" aria-hidden="true"></div><section class="market-bar"><div class="token-title"><div id="tokenAvatar" class="token-avatar">D</div><div><strong id="tokenName">ROCKET DOG</strong><span><b id="tokenSymbol">$DOGE2</b> · <span id="tokenTag">long-run moonshot</span> · <b id="holders">1</b> holders</span></div></div><div class="market-stats"><div><span>Market cap</span><strong id="marketCap">$0</strong></div><div><span>Liquidity</span><strong id="marketLiquidity">$0</strong></div><div><span>24h</span><strong id="change">+0.00%</strong></div></div></section>
+    <section class="learning-strip"><div class="lesson-intro"><strong>Practice mode // $0 risk</strong><span>Run the scenario, watch the numbers change, then reset and try a different decision.</span></div><div class="lesson"><b>01 · Read the chart</b><p>Green candles show price rising. Red candles show selling pressure.</p></div><div class="lesson"><b>02 · Check the numbers</b><p>Market cap is token value. Liquidity is how much can actually trade.</p></div><div class="lesson"><b>03 · Control risk</b><p>Use small position sizes. Slippage means your fill can be worse than the quote.</p></div></section>
+    <main class="terminal-grid">
+      <aside class="left-rail"><section class="rail-card"><h2>Portfolio</h2><div class="metric"><span>Practice equity</span><strong id="railEquity">$2,000</strong></div><div class="metric"><span>Today's P&L</span><strong class="positive">+$0.00</strong></div><div class="metric"><span>Risk level</span><strong>TRAINING</strong></div></section><section class="rail-card"><h2>Top markets</h2><div class="rail-token"><i>₿</i><span><strong>BTC/USD</strong><small>Bitcoin</small></span><em>+3.32%</em></div><div class="rail-token"><i>◉</i><span><strong>ETH/USD</strong><small>Ethereum</small></span><em>+1.80%</em></div><div class="rail-token"><i>F</i><span><strong>$FOMO</strong><small id="railScenario">Rocket Dog</small></span><em>LIVE</em></div><div class="rail-token"><i>◎</i><span><strong>SOL/USD</strong><small>Solana</small></span><em>+2.14%</em></div></section><section class="rail-card"><h2>Practice tips</h2><p class="trade-note">Start small. Watch liquidity. Plan the exit before clicking buy.</p></section></aside>
+      <section class="panel chart-panel">
+        <div class="panel-top"><div><span class="coin-name">$FOMO / USD</span><div class="mini-label">BONDING CURVE · VIRTUAL SOL</div></div><span id="price" class="price">$0.00000001</span></div>
+        <div class="chart-toolbar"><div class="tabs"><button class="tab active">1m</button><button class="tab">5m</button><button class="tab">1h</button></div><span class="pair-state" id="pairState">● CURVE LIVE</span></div><div class="data-import"><span class="mini-label">LINE = CLOSE · CANDLES = OHLC</span><span id="ohlcLegend" class="data-source">OPEN / HIGH / LOW / CLOSE</span></div>
+        <div class="chart-wrap" id="chartWrap"><svg viewBox="0 0 900 360" preserveAspectRatio="none" aria-label="Meme coin price chart"><polygon id="chartFill" class="chart-fill" points="0,350 0,350"/><g id="candles" aria-label="Candlesticks"></g><polyline id="chartLine" class="chart-line" points="0,350"/></svg></div><div class="chart-hint">TAP OR CLICK ANYWHERE ON THE CHART TO SIMULATE A MARKET ENTRY</div>
+        <div id="status" class="status">SYSTEM READY // press START TRADE to awaken the market</div>
+        <div class="curve"><div class="curve-head"><span>Bonding curve progress</span><strong id="curvePercent">0.0%</strong></div><div class="curve-track"><div id="curveFill" class="curve-fill"></div></div></div>
+      </section>
+      <aside class="right-panel">
+        <section class="panel trade-panel"><div class="trade-header"><h2>Trade</h2><span class="wallet-balance">PRACTICE WALLET<strong id="walletBalance">$2,000</strong></span></div><div class="trade-tabs"><button id="buyTab" class="active">Buy</button><button id="sellTab">Sell</button></div><div class="input-label"><label for="amount">Position size</label><span>Available <b id="availableBalance">$2,000</b></span></div><div class="amount"><input id="amount" aria-label="Practice trade amount" type="number" value="100" min="1" step="10"><span>USD</span></div><div class="quick"><button data-amount="50">$50</button><button data-amount="100">$100</button><button data-amount="500">$500</button><button data-amount="2000">MAX</button></div><button id="start" class="start execute">Start Trade</button><button id="buy" class="buy" disabled>Buy The Top</button><button id="panic" class="panic" disabled>Panic Sell At Loss</button><p class="trade-note">Simulated only · estimated slippage varies by case · no wallet connection</p></section>
+        <section class="panel metrics"><h2>Token data</h2><div class="metric"><span>Hype index</span><strong id="hype">0%</strong></div><div class="metric"><span>Virtual reserves</span><strong id="reserves">30 SOL</strong></div><div class="metric"><span>Top holders</span><strong id="topHolder">100.0%</strong></div><div class="warning">WARNING: This token has no utility, roadmap, or adult supervision.</div></section>
+      </aside>
+    </main>
+    <section class="market-table"><h2>Market overview <span class="mini-label">· simulated watchlist</span></h2><div class="table-row"><strong>Asset</strong><span>Price</span><span>24h change</span><span>Liquidity</span></div><div class="table-row"><strong id="tableScenario">$DOGE2</strong><span id="tablePrice">$0</span><span id="tableChange" class="positive">+0.00%</span><span id="tableLiquidity">$0</span></div><div class="table-row"><strong>BTC/USD</strong><span>$95,006</span><span class="positive">+3.32%</span><span>$394M</span></div><div class="table-row"><strong>ETH/USD</strong><span>$3,421</span><span class="negative">-1.08%</span><span>$188M</span></div></section>
+    <section class="panel feed-panel"><h2>Live trades <span class="mini-label">· newest first</span></h2><div id="tradeFeed"><div class="trade-row"><b>BUY</b><span>system launch</span><time>now</time></div></div></section>
+    <section class="case-history"><h2>Previous meme-coin case files</h2><div class="case-grid"><div class="case-card"><strong>DOGE-style · $2K → billion-scale attention</strong><span>Community persistence, multiple hype cycles, violent drawdowns.</span></div><div class="case-card"><strong>SHIB-style · supply and narrative</strong><span>Huge supply, exchange listings, and liquidity that changed over time.</span></div><div class="case-card"><strong>PEPE-style · fast attention trade</strong><span>Rapid discovery can reverse before late buyers find an exit.</span></div><div class="case-card"><strong>BONK-style · ecosystem momentum</strong><span>Strong community catalyst with sharp, non-linear volatility.</span></div><div class="case-card"><strong>WIF-style · social breakout</strong><span>A thin market can reprice quickly in both directions.</span></div><div class="case-card"><strong>Rug file · the contract is the risk</strong><span>Anonymous control, unlocked liquidity, or insider selling can end the market.</span></div></div></section>
+    <section id="scoreboard" class="scoreboard" hidden><p>Practice round concluded // review what happened, then try again</p><strong id="scoreResult">Total Financial Sanity Lost: 100%</strong><button id="reset" class="reset">Reset Practice Round</button></section>
+    <section class="glossary"><div class="glossary-card"><strong>Market cap</strong><p>Price multiplied by supply. A bigger number does not automatically mean a healthier project.</p></div><div class="glossary-card"><strong>Liquidity</strong><p>Available trading depth. Low liquidity can make buying or selling move the price sharply.</p></div><div class="glossary-card"><strong>Slippage</strong><p>The gap between the price you expect and the price you receive when the market moves.</p></div><div class="glossary-card"><strong>Bonding curve</strong><p>A programmed pricing curve where each buy pushes the next token price higher.</p></div></section>
+    <section class="knowledge"><h2>Crypto learning lab</h2><p class="knowledge-intro">Use this page to understand the machinery behind the chart. The simulator deliberately includes uncertainty because real markets are adaptive systems, not answer keys.</p><div class="knowledge-grid"><article class="knowledge-card"><h3>Probability, not certainty</h3><p>Each setup is a distribution of possible outcomes. A good risk process can still lose on one trade. Think in expected value and position sizing, never in guaranteed calls.</p><div class="formula">E[X] = Σ pᵢ · returnᵢ</div></article><article class="knowledge-card"><h3>Returns and volatility</h3><p>Prices compound multiplicatively. Log return compares proportional movement, while volatility measures dispersion around that movement.</p><div class="formula">rₜ = ln(Pₜ / Pₜ₋₁)</div></article><article class="knowledge-card"><h3>Calculus of momentum</h3><p>The slope of the price curve is momentum. A changing slope is acceleration, but both can reverse when liquidity or sentiment changes.</p><div class="formula">momentum ≈ dP/dt · acceleration ≈ d²P/dt²</div></article><article class="knowledge-card"><h3>Liquidity and impact</h3><p>A market order consumes available depth. Thin books create nonlinear impact, so the displayed price is not always the executed price.</p><div class="formula">impact ∝ size / depth</div></article><article class="knowledge-card"><h3>Bayesian updating</h3><p>New evidence should update a belief, not confirm a story. A headline, volume spike, or whale move can change probabilities without proving direction.</p><div class="formula">P(H|D) ∝ P(D|H) · P(H)</div></article><article class="knowledge-card"><h3>Regimes and feedback</h3><p>Markets switch between trend, chop, panic, and recovery. Traders react to price, and that reaction changes the next price, creating feedback and reflexivity.</p><div class="formula">P(stateₜ | stateₜ₋₁) ≠ constant</div></article></div><div class="math-note">Prediction limit: randomness, hidden information, adversarial behavior, fees, and regime changes mean even sophisticated analysis can be wrong. Practice process, drawdown control, and exit planning rather than trying to make the future certain.</div></section>
+  </div>
+
+  <div id="modal" class="modal" hidden><div class="modal-card"><h3>Too early, legend</h3><p>Not hyped enough yet! Wait for the top!</p><button id="closeModal">Understood, I will chase it</button></div></div>
+  <script>
+    const line = document.querySelector('#chartLine');
+    const fill = document.querySelector('#chartFill');
+    const candles = document.querySelector('#candles');
+    const buy = document.querySelector('#buy');
+    const panic = document.querySelector('#panic');
+    const status = document.querySelector('#status');
+    const price = document.querySelector('#price');
+    const hype = document.querySelector('#hype');
+    const curveFill = document.querySelector('#curveFill');
+    const marketCap = document.querySelector('#marketCap');
+    const change = document.querySelector('#change');
+    const reserves = document.querySelector('#reserves');
+    const holders = document.querySelector('#holders');
+    const topHolder = document.querySelector('#topHolder');
+    const pairState = document.querySelector('#pairState');
+    const tradeFeed = document.querySelector('#tradeFeed');
+    const amount = document.querySelector('#amount');
+    const buyTab = document.querySelector('#buyTab');
+    const sellTab = document.querySelector('#sellTab');
+    const reset = document.querySelector('#reset');
+    const scoreResult = document.querySelector('#scoreResult');
+    const modal = document.querySelector('#modal');
+    const scenarioSelect = document.querySelector('#scenarioSelect');
+    const bankroll = document.querySelector('#bankroll');
+    const loadMarket = document.querySelector('#loadMarket');
+    const walletBalance = document.querySelector('#walletBalance');
+    const availableBalance = document.querySelector('#availableBalance');
+    const tokenAvatar = document.querySelector('#tokenAvatar');
+    const tokenName = document.querySelector('#tokenName');
+    const tokenSymbol = document.querySelector('#tokenSymbol');
+    const tokenTag = document.querySelector('#tokenTag');
+    const railEquity = document.querySelector('#railEquity');
+    const railScenario = document.querySelector('#railScenario');
+    const tableScenario = document.querySelector('#tableScenario');
+    const tablePrice = document.querySelector('#tablePrice');
+    const tableChange = document.querySelector('#tableChange');
+    const tableLiquidity = document.querySelector('#tableLiquidity');
+    const chartWrap = document.querySelector('#chartWrap');
+    const csvFile = document.querySelector('#csvFile');
+    const dataSource = document.querySelector('#dataSource');
+    const ohlcLegend = document.querySelector('#ohlcLegend');
+    let points = [];
+    let phase = 'ready';
+    let pumpTimer;
+    let tradeMode = 'buy';
+    let startingWallet = 2000;
+    let currentWallet = 2000;
+    let positionSize = 0;
+    let roundEnd = 0;
+    let scenario;
+    let entryMarker;
+    let chartEntryTaken = false;
+    let historicalRecords = [];
+    let activeOhlc = [];
+
+    const scenarios = {
+      doge: { name: 'ROCKET DOG', symbol: '$DOGE2', tag: 'long-run moonshot', avatar: 'D', peak: 22000, end: 9800, outcome: 'moon', volatility: .8, mood: 'COMMUNITY BID // patience beats precision' },
+      shib: { name: 'SHELTER DOG', symbol: '$SHIBX', tag: 'viral supply shock', avatar: 'S', peak: 4800, end: 1100, outcome: 'fade', volatility: 1.2, mood: 'SUPPLY FLOOD // narrative still fighting gravity' },
+      pepe: { name: 'GREEN FROG', symbol: '$PEP3', tag: 'explosive fade', avatar: 'P', peak: 8600, end: 28, outcome: 'fade', volatility: 1.8, mood: 'ATTENTION ROTATION // late liquidity is thin' },
+      bonk: { name: 'SOLANA DOG', symbol: '$BONK2', tag: 'volatile chop', avatar: 'B', peak: 3100, end: 145, outcome: 'chop', volatility: 2.4, mood: 'TWO-SIDED MARKET // every candle has a counter-candle' },
+      hat: { name: 'HAT DOG', symbol: '$HAT', tag: 'fast breakout', avatar: 'H', peak: 12500, end: 3600, outcome: 'moon', volatility: 1.5, mood: 'BREAKOUT BID // momentum is not a thesis' },
+      rug: { name: 'MELON', symbol: '$MELON', tag: 'anonymous rug pull', avatar: 'M', peak: 900, end: 0, outcome: 'rug', volatility: 2.1, mood: 'DEV WALLET MOVING // exit liquidity detected' }
+    };
+
+    scenario = scenarios[scenarioSelect.value];
+
+    function createSvgElement(type, attributes) {
+      const element = document.createElementNS('http://www.w3.org/2000/svg', type);
+      Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
+      return element;
+    }
+
+    function enterAtChartPoint(event) {
+      if (phase !== 'pumping' || chartEntryTaken) return;
+      const bounds = chartWrap.getBoundingClientRect();
+      const x = Math.max(0, Math.min(900, (event.clientX - bounds.left) / bounds.width * 900));
+      const y = Math.max(25, Math.min(345, (event.clientY - bounds.top) / bounds.height * 360));
+      const svg = chartWrap.querySelector('svg');
+      entryMarker = createSvgElement('circle', { class: 'entry-marker', cx: x, cy: y, r: 7, 'aria-label': 'Your simulated entry' });
+      svg.append(entryMarker);
+      chartEntryTaken = true;
+      status.textContent = `ENTRY FILLED // ${scenario.symbol} // simulated market order at chart point`;
+      addTrade('BUY', 'chart entry', formatMoney(positionSize));
+    }
+
+    function draw(pointsToDraw, crashed = false) {
+      const pointString = pointsToDraw.map(point => point.join(',')).join(' ');
+      line.setAttribute('points', pointString);
+      line.classList.toggle('crash', crashed);
+      fill.setAttribute('points', `0,350 ${pointString} 900,350`);
+      candles.replaceChildren();
+      if (activeOhlc.length) {
+        activeOhlc.forEach(record => {
+          const direction = record.closeY <= record.openY ? 'candle-up' : 'candle-down';
+          candles.append(
+            createSvgElement('line', { class: `candle-wick ${direction}`, x1: record.x, x2: record.x, y1: record.highY, y2: record.lowY }),
+            createSvgElement('rect', { class: `candle-body ${direction}`, x: record.x - 4, y: Math.min(record.openY, record.closeY), width: 8, height: Math.max(3, Math.abs(record.closeY - record.openY)), rx: 1 })
+          );
+        });
+        return;
+      }
+      for (let index = 0; index < pointsToDraw.length; index += 4) {
+        const group = pointsToDraw.slice(index, index + 4);
+        if (group.length < 2) continue;
+        const open = index === 0 ? 350 : pointsToDraw[index - 1][1];
+        const close = group[group.length - 1][1];
+        const high = Math.min(open, ...group.map(point => point[1]));
+        const low = Math.max(open, ...group.map(point => point[1]));
+        const x = group[0][0] - 4;
+        const width = Math.max(6, group[group.length - 1][0] - group[0][0] - 2);
+        const direction = close <= open ? 'candle-up' : 'candle-down';
+        candles.append(
+          createSvgElement('line', { class: `candle-wick ${direction}`, x1: group[0][0], x2: group[0][0], y1: high, y2: low }),
+          createSvgElement('rect', { class: `candle-body ${direction}`, x, y: Math.min(open, close), width, height: Math.max(3, Math.abs(close - open)), rx: 1 })
+        );
+      }
+    }
+
+    function formatMoney(value) { return `$${Math.max(0, Math.round(value)).toLocaleString()}`; }
+    function formatPrice(value) { return value > 1 ? formatMoney(value) : `$${Number(value).toPrecision(4)}`; }
+    function formatSol(value) { return formatMoney(value); }
+    function updateWallet() {
+      walletBalance.textContent = formatMoney(currentWallet);
+      availableBalance.textContent = formatMoney(currentWallet);
+    }
+    function applyScenario() {
+      tokenAvatar.textContent = scenario.avatar;
+      tokenName.textContent = scenario.name;
+      tokenSymbol.textContent = scenario.symbol;
+      tokenTag.textContent = scenario.tag;
+      document.querySelector('.coin-name').textContent = `${scenario.symbol} / USD`;
+      document.querySelector('.ticker span').textContent = `${scenario.symbol} LIVE // ${scenario.tag.toUpperCase()} // PRACTICE MARKET // ${scenario.symbol} LIVE // ${scenario.tag.toUpperCase()} // PRACTICE MARKET // `;
+    }
+    function parseOhlcCsv(text) {
+      const rows = text.trim().split(/\r?\n/).map(row => row.split(',').map(value => value.trim()));
+      if (rows.length < 3) throw new Error('CSV needs a header and at least two candles.');
+      const headers = rows.shift().map(value => value.toLowerCase());
+      const indexOf = name => headers.findIndex(header => header === name || header.includes(name));
+      const columns = { open: indexOf('open'), high: indexOf('high'), low: indexOf('low'), close: indexOf('close') };
+      if (Object.values(columns).some(index => index < 0)) throw new Error('CSV must contain open, high, low, and close columns.');
+      const values = rows.map(row => ({ open: Number(row[columns.open]), high: Number(row[columns.high]), low: Number(row[columns.low]), close: Number(row[columns.close]) })).filter(record => Object.values(record).every(Number.isFinite));
+      if (values.length < 2) throw new Error('CSV has no usable OHLC records.');
+      const prices = values.flatMap(record => [record.high, record.low]);
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      const range = Math.max(max - min, Number.EPSILON);
+      return values.map((record, index) => ({ x: 18 + index * 864 / (values.length - 1), openY: 340 - ((record.open - min) / range) * 300, highY: 340 - ((record.high - min) / range) * 300, lowY: 340 - ((record.low - min) / range) * 300, closeY: 340 - ((record.close - min) / range) * 300, close: record.close }));
+    }
+    function normalRandom() {
+      const first = Math.max(Number.EPSILON, Math.random());
+      const second = Math.max(Number.EPSILON, Math.random());
+      return Math.sqrt(-2 * Math.log(first)) * Math.cos(Math.PI * 2 * second);
+    }
+    function addTrade(type, label, value) {
+      const row = document.createElement('div');
+      row.className = 'trade-row';
+      row.innerHTML = `<b>${type}</b><span>${label} <small>${value}</small></span><time>now</time>`;
+      tradeFeed.prepend(row);
+      while (tradeFeed.children.length > 5) tradeFeed.lastElementChild.remove();
+    }
+    function updateStats(step = 0) {
+      const progress = Math.min(100, step / 80 * 100);
+      const curve = Math.min(99.9, progress * .99);
+      const cap = step === 0 ? 0 : phase === 'crashed' || phase === 'finished' ? Math.round(4200 * roundEnd / 1000) : Math.round(4200 * Math.pow(1 + progress / 25, 2) * scenario.peak / 22000);
+      curveFill.style.width = `${curve}%`;
+      curvePercent.textContent = `${curve.toFixed(1)}%`;
+      marketCap.textContent = `$${cap.toLocaleString()}`;
+      marketLiquidity.textContent = `$${Math.round(cap * (scenario.outcome === 'rug' ? .002 : .024)).toLocaleString()}`;
+      reserves.textContent = `${Math.max(0, Math.round(30 - progress * .28))} SOL`;
+      holders.textContent = Math.max(1, Math.round(1 + progress * 1.8));
+      topHolder.textContent = `${Math.max(1.2, 100 - progress * .7).toFixed(1)}%`;
+      change.textContent = phase === 'crashed' || phase === 'finished' ? `${roundEnd === 0 ? '-99.90' : ((roundEnd / scenario.peak - 1) * 100).toFixed(2)}%` : `+${(progress * 10.5).toFixed(2)}%`;
+      railEquity.textContent = formatMoney(currentWallet);
+      railScenario.textContent = scenario.name;
+      tableScenario.textContent = scenario.symbol;
+      tablePrice.textContent = price.textContent;
+      tableChange.textContent = change.textContent;
+      tableChange.classList.toggle('negative', change.textContent.startsWith('-'));
+      tableChange.classList.toggle('positive', !change.textContent.startsWith('-'));
+      tableLiquidity.textContent = marketLiquidity.textContent;
+    }
+
+    function spawnRocket() {
+      const rocket = document.createElement('div');
+      rocket.className = 'rocket';
+      rocket.textContent = '🚀';
+      rocket.style.left = `${8 + Math.random() * 84}vw`;
+      rocket.style.setProperty('--drift', `${-80 + Math.random() * 160}px`);
+      rocket.style.setProperty('--flight', `${1.6 + Math.random() * 1.8}s`);
+      document.body.append(rocket);
+      rocket.addEventListener('animationend', () => rocket.remove());
+    }
+
+    function showModal() { modal.hidden = false; }
+    function flashCrash() {
+      const flash = document.createElement('div');
+      flash.className = 'flash';
+      flash.innerHTML = '<strong>RUG PULLED!</strong>';
+      document.body.append(flash);
+      setTimeout(() => flash.remove(), 750);
+    }
+
+    function finishRound() {
+      phase = 'finished';
+      panic.disabled = true;
+      const pnl = currentWallet - startingWallet;
+      scoreResult.textContent = pnl >= 0 ? `Practice P&L: +${formatMoney(pnl)} // simulated only` : `Practice P&L: -${formatMoney(Math.abs(pnl))} // simulated only`;
+      document.querySelector('#scoreboard').hidden = false;
+      status.textContent = `ROUND COMPLETE // ${scenario.name} ended at ${formatMoney(roundEnd)} case value`;
+      addTrade('SELL', 'you', formatMoney(currentWallet));
+    }
+
+    function resolveMarket() {
+      phase = 'crashed'; buy.disabled = true; panic.disabled = true;
+      const peak = points[points.length - 1] || [900, 25];
+      const endY = scenario.outcome === 'rug' ? 350 : scenario.outcome === 'fade' ? 315 : scenario.outcome === 'chop' ? 210 : 90;
+      const resolution = [];
+      for (let index = 1; index <= 10; index += 1) {
+        resolution.push([900 + index * 2, peak[1] + (endY - peak[1]) * index / 10]);
+      }
+      const resolvedPoints = [...points, ...resolution];
+      draw(resolvedPoints, scenario.outcome !== 'moon');
+      points = resolvedPoints;
+      const returnValue = positionSize * roundEnd / scenario.peak;
+      currentWallet = startingWallet - positionSize + returnValue;
+      price.textContent = formatMoney(roundEnd);
+      price.classList.toggle('crashed', scenario.outcome !== 'moon');
+      pairState.textContent = scenario.outcome === 'rug' ? '● RUGGED' : scenario.outcome === 'moon' ? '● RUNNING' : '● DISTRIBUTION';
+      status.textContent = scenario.mood;
+      updateStats(100);
+      updateWallet();
+      addTrade(scenario.outcome === 'rug' ? 'SELL' : 'HOLD', scenario.tag, formatMoney(returnValue));
+      if (scenario.outcome === 'rug') flashCrash();
+      setTimeout(() => { panic.disabled = false; status.textContent = 'EXIT WINDOW OPEN // sell to record your simulated result'; }, 850);
+    }
+
+    start.addEventListener('click', () => {
+      if (phase !== 'ready') return;
+      positionSize = Math.min(Number(amount.value) || 0, currentWallet);
+      if (positionSize <= 0) { status.textContent = 'ENTER A PRACTICE AMOUNT BEFORE STARTING'; return; }
+      phase = 'pumping'; start.disabled = true; buy.disabled = false;
+      status.textContent = `MARKET LIVE // ${scenario.tag} // number go up`;
+      addTrade('BUY', 'you', formatMoney(positionSize));
+      activeOhlc = [];
+      chartEntryTaken = false;
+      chartEntryTaken = false;
+      if (entryMarker) { entryMarker.remove(); entryMarker = null; }
+      let latentShock = 0;
+      let regime = 'trend';
+      let regimeLife = 0;
+      let step = 0;
+      pumpTimer = setInterval(() => {
+        step += 1;
+        const x = (step / 80) * 900;
+        let y;
+        if (historicalRecords.length) {
+          const recordIndex = Math.min(historicalRecords.length - 1, Math.floor((step - 1) / 80 * historicalRecords.length));
+          activeOhlc = historicalRecords.slice(0, recordIndex + 1);
+          y = activeOhlc[activeOhlc.length - 1].closeY;
+        } else {
+          if (regimeLife <= 0) {
+            regime = ['trend', 'trend', 'chop', 'mean-revert', 'panic'][Math.floor(Math.random() * 5)];
+            regimeLife = 5 + Math.floor(Math.random() * 14);
+          }
+          regimeLife -= 1;
+          const base = 345 - Math.pow(step / 80, scenario.outcome === 'moon' ? 1.35 : 1.7) * 315;
+          const regimeDrift = regime === 'trend' ? -2.2 : regime === 'mean-revert' ? (175 - base) * .035 : regime === 'panic' ? 5.5 : 0;
+          const jump = Math.random() < .035 * scenario.volatility ? normalRandom() * 45 : 0;
+          latentShock = latentShock * .78 + normalRandom() * 8 * scenario.volatility + jump;
+          if (scenario.outcome === 'rug' && step > 55 && Math.random() < .055) latentShock -= 95;
+          y = Math.max(25, Math.min(345, base + regimeDrift + latentShock));
+        }
+        points.push([Math.min(x, 900), Math.max(y, 25)]);
+        draw(points);
+        const hypeValue = Math.min(99, Math.round(step / 80 * 100));
+        hype.textContent = `${hypeValue}%`;
+        price.textContent = historicalRecords.length ? formatPrice(activeOhlc[activeOhlc.length - 1].close) : formatMoney(Math.max(1, Math.round(4200 * Math.pow(1 + step / 8, 2) * scenario.peak / 22000)));
+        updateStats(step);
+        if (step % 3 === 0) spawnRocket();
+        if (step >= 80) { clearInterval(pumpTimer); phase = 'peak'; buy.textContent = scenario.outcome === 'rug' ? 'BUY THE TOP' : 'ENTER AT PEAK'; pairState.textContent = '● PEAK LIQUIDITY'; status.textContent = `PEAK DETECTED // ${scenario.mood}`; addTrade('BUY', 'crowd', scenario.tag); }
+      }, 45);
+    });
+
+    buy.addEventListener('click', () => {
+      if (phase === 'pumping') { showModal(); return; }
+      if (phase !== 'peak') return;
+      resolveMarket();
+    });
+
+    panic.addEventListener('click', () => {
+      if (phase !== 'crashed') return;
+      finishRound();
+    });
+
+    function resetRound() {
+      clearInterval(pumpTimer);
+      points = [];
+      phase = 'ready';
+      startingWallet = Math.max(10, Number(bankroll.value) || 2000);
+      currentWallet = startingWallet;
+      positionSize = 0;
+      roundEnd = scenario.outcome === 'rug' ? 0 : Math.max(1, Math.round(scenario.end * (0.86 + Math.random() * 0.28)));
+      activeOhlc = [];
+      start.disabled = false;
+      start.textContent = tradeMode === 'buy' ? 'Start Trade' : 'Simulate Sell';
+      buy.disabled = true;
+      buy.textContent = 'Buy';
+      panic.disabled = true;
+      price.classList.remove('crashed');
+      price.textContent = '$0';
+      pairState.textContent = '● CURVE LIVE';
+      status.textContent = `SYSTEM READY // ${scenario.name} // choose a size to start`;
+      document.querySelector('#scoreboard').hidden = true;
+      scoreResult.textContent = 'Total Financial Sanity Lost: 100%';
+      tradeFeed.innerHTML = '<div class="trade-row"><b>BUY</b><span>system launch</span><time>now</time></div>';
+      draw([]);
+      hype.textContent = '0%';
+      updateStats(0);
+      updateWallet();
+    }
+
+    reset.addEventListener('click', resetRound);
+    loadMarket.addEventListener('click', () => {
+      scenario = scenarios[scenarioSelect.value];
+      applyScenario();
+      resetRound();
+    });
+
+    [buyTab, sellTab].forEach(tab => tab.addEventListener('click', () => {
+      tradeMode = tab === buyTab ? 'buy' : 'sell';
+      buyTab.classList.toggle('active', tradeMode === 'buy');
+      sellTab.classList.toggle('active', tradeMode === 'sell');
+      start.textContent = tradeMode === 'buy' ? 'Start Trade' : 'Simulate Sell';
+    }));
+    document.querySelectorAll('[data-amount]').forEach(button => button.addEventListener('click', () => { amount.value = button.dataset.amount; }));
+
+    csvFile.addEventListener('change', async () => {
+      const file = csvFile.files[0];
+      if (!file) return;
+      try {
+        historicalRecords = parseOhlcCsv(await file.text());
+        dataSource.textContent = `IMPORTED SOURCE · ${historicalRecords.length} CANDLES`;
+        ohlcLegend.textContent = 'SOURCE OHLC / LINE CLOSE';
+        pairState.textContent = '● SOURCE DATA READY';
+        status.textContent = `SOURCE LOADED // ${historicalRecords.length} real OHLC records ready for replay`;
+      } catch (error) {
+        historicalRecords = [];
+        dataSource.textContent = 'IMPORT ERROR';
+        status.textContent = `CSV ERROR // ${error.message}`;
+      }
+    });
+    chartWrap.addEventListener('pointerdown', enterAtChartPoint);
+
+    document.querySelector('#closeModal').addEventListener('click', () => { modal.hidden = true; });
+    applyScenario();
+    resetRound();
+  </script>
+</body>
+</html>
